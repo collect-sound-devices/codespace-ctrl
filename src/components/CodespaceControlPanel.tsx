@@ -36,10 +36,6 @@ export function CodespaceControlPanel() {
     runStop();
   }
 
-  function handleRefresh() {
-    runSearch();
-  }
-
   function runSearch() {
     const request = buildRequest();
 
@@ -183,32 +179,35 @@ export function CodespaceControlPanel() {
           />
         </label>
 
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex gap-3">
           <button
             type="submit"
             disabled={!canSubmit}
-            className="inline-flex h-11 items-center justify-center gap-2 border border-stone-950 bg-stone-950 px-4 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-300 disabled:bg-stone-300"
+            className="inline-flex size-11 items-center justify-center border border-stone-950 bg-stone-950 text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-300 disabled:bg-stone-300"
+            aria-label="Refresh codespace status"
+            title={activeOperation === "search" ? "Refreshing" : "Refresh"}
           >
-            <SearchIcon />
-            {activeOperation === "search" ? "Searching" : "Search"}
+            <RefreshIcon />
           </button>
           <button
             type="button"
             onClick={handleStart}
             disabled={!canSubmit}
-            className="inline-flex h-11 items-center justify-center gap-2 border border-emerald-700 bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:border-stone-300 disabled:bg-stone-300"
+            className="inline-flex size-11 items-center justify-center border border-emerald-700 bg-emerald-700 text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:border-stone-300 disabled:bg-stone-300"
+            aria-label="Start codespace"
+            title={activeOperation === "start" ? "Starting" : "Start"}
           >
             <PlayIcon />
-            {activeOperation === "start" ? "Starting" : "Start"}
           </button>
           <button
             type="button"
             onClick={handleStop}
             disabled={!canSubmit}
-            className="inline-flex h-11 items-center justify-center gap-2 border border-red-700 bg-red-700 px-4 text-sm font-semibold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:border-stone-300 disabled:bg-stone-300"
+            className="inline-flex size-11 items-center justify-center border border-red-700 bg-red-700 text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:border-stone-300 disabled:bg-stone-300"
+            aria-label="Stop codespace"
+            title={activeOperation === "stop" ? "Stopping" : "Stop"}
           >
             <StopIcon />
-            {activeOperation === "stop" ? "Stopping" : "Stop"}
           </button>
         </div>
       </form>
@@ -217,19 +216,16 @@ export function CodespaceControlPanel() {
         codespace={codespace}
         found={found}
         message={message}
-        isBusy={isBusy}
-        canRefresh={query.trim().length > 0 && secret.length > 0}
-        onRefresh={handleRefresh}
       />
     </div>
   );
 }
 
-function SearchIcon() {
+function RefreshIcon() {
   return (
     <svg
       aria-hidden="true"
-      className="size-4"
+      className="size-5"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -238,7 +234,7 @@ function SearchIcon() {
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
-        d="m21 21-4.3-4.3M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+        d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5M4 13a8.1 8.1 0 0 0 15.5 2m.5 5v-5h-5"
       />
     </svg>
   );

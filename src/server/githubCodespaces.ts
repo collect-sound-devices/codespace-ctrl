@@ -29,13 +29,13 @@ export async function findCodespaceByNameOrDisplayName(
   query: string,
 ): Promise<CodespaceSummary | null> {
   const codespaces = await listCodespaces();
-  const normalizedQuery = query.trim();
+  const normalizedQuery = normalizeCodespaceLookupValue(query);
 
   return (
     codespaces.find(
       (codespace) =>
-        codespace.name === normalizedQuery ||
-        codespace.displayName === normalizedQuery,
+        normalizeCodespaceLookupValue(codespace.name) === normalizedQuery ||
+        normalizeCodespaceLookupValue(codespace.displayName) === normalizedQuery,
     ) ?? null
   );
 }
@@ -154,4 +154,8 @@ function isGitHubCodespace(value: unknown): value is {
     (codespace.state === undefined || typeof codespace.state === "string") &&
     (codespace.web_url === undefined || typeof codespace.web_url === "string")
   );
+}
+
+function normalizeCodespaceLookupValue(value: string): string {
+  return value.trim().toLocaleLowerCase();
 }
