@@ -54,6 +54,20 @@ export async function startCodespace(
   return toCodespaceSummary(payload);
 }
 
+export async function stopCodespace(
+  codespaceName: string,
+): Promise<CodespaceSummary> {
+  const response = await githubFetch(
+    `/user/codespaces/${encodeURIComponent(codespaceName)}/stop`,
+    {
+      method: "POST",
+    },
+  );
+
+  const payload = (await response.json()) as unknown;
+  return toCodespaceSummary(payload);
+}
+
 async function listCodespaces(): Promise<CodespaceSummary[]> {
   const codespaces: CodespaceSummary[] = [];
   let page = 1;
@@ -141,4 +155,3 @@ function isGitHubCodespace(value: unknown): value is {
     (codespace.web_url === undefined || typeof codespace.web_url === "string")
   );
 }
-

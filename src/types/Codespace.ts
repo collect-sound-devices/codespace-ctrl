@@ -41,3 +41,12 @@ export type StartCodespaceResponse =
       found: false;
     };
 
+export type StopCodespaceResponse =
+  | {
+      stopped: true;
+      codespace: CodespaceSummary;
+    }
+  | {
+      stopped: false;
+      found: false;
+    };
