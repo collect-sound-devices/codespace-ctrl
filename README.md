@@ -1,41 +1,48 @@
-# codespace-ctrl
+# Codespace Ctrl
 
-Small Next.js/Vercel control panel for finding and starting GitHub Codespaces by `name` or `display_name`.
+Small GitHub Codespaces control panel using Next.js / React / TypeScript.
 
-The browser never talks to GitHub directly. All GitHub calls happen in Vercel server functions and are protected by a shared secret sent in the POST request body.
+The app searches the authenticated user's GitHub Codespaces by `name` or
+`display_name` and can start or stop a matched codespace. The browser never calls
+GitHub directly. GitHub API access stays inside Next.js server route handlers.
 
-## Current Scaffold
+## Motivation
 
-- Next.js `16.2.6`
-- React `19.2.4`
-- TypeScript
-- App Router
-- `src/` directory
-- Tailwind dependencies are present from the scaffold, but the app should stay visually simple unless we decide to use them deliberately.
+*Codespace Ctrl* provides a small public control surface for GitHub Codespaces
+without exposing the GitHub token to the browser.
 
-Before changing Next.js routing or server function code, read the relevant local docs under:
+It is intended for cases where a known shared secret is enough protection and a
+full user login flow would be unnecessary.
 
-```text
-node_modules/next/dist/docs/
-```
+## Functions
 
-This project has an `AGENTS.md` warning because this Next.js version may differ from older conventions.
+- Search: finds a codespace by exact `name` or exact `display_name`.
+- Status: shows whether the codespace was found and displays its current state.
+- Start: starts the matched codespace when it is not already running.
+- Stop: stops the matched codespace when it is not already stopped.
+- UI: provides one search field, one secret field, icon buttons, and readonly
+  status details.
+- Server protection: every Codespaces API route requires a valid shared secret
+  in the POST request body.
 
-## Purpose
+## Web Hosting (Primary Use Case)
 
-- Search the authenticated user's GitHub Codespaces by exact `name` or exact `display_name`.
-- Show whether the codespace was found.
-- Show the current running state.
-- Start the matched codespace from a public POST endpoint when the shared secret is valid.
-- Provide a compact UI with:
-  - Header with app name and version.
-  - Search field for codespace name or display name.
-  - Secret string field.
-  - Status area with found/running state, refresh button, readonly name, and readonly display name.
+### Client
+
+- *Codespace Ctrl* is designed for Vercel deployment.
+- The UI is served by Next.js and runs in the browser.
+- The UI sends POST requests only to this app's own API routes.
+
+### Server Functions
+
+- Next.js route handlers run as Vercel server functions.
+- Server functions call the GitHub Codespaces REST API with `GITHUB_PAT`.
+- Server functions reject invalid shared secrets before calling GitHub.
 
 ## Environment Variables
 
-Use these locally in `.env.local` and in Vercel Environment Variables:
+Configure these variables locally in `.env.local` and in Vercel Environment
+Variables:
 
 ```text
 GITHUB_PAT=github_pat_or_classic_token
@@ -44,81 +51,28 @@ CODESPACE_CTRL_SECRET=shared_post_secret
 
 Do not expose either value with `NEXT_PUBLIC_`.
 
-## Planned Structure
+`GITHUB_PAT` must belong to the GitHub account that owns the target codespaces
+and must be allowed to manage Codespaces.
 
-```text
-src/
-  app/
-    api/
-      codespaces/
-        search/
-          route.ts
-        start/
-          route.ts
-    layout.tsx
-    page.tsx
-  components/
-    Header.tsx
-    CodespaceControlPanel.tsx
-    CodespaceStatus.tsx
-  server/
-    githubCodespaces.ts
-    requestAuth.ts
-  services/
-    codespaceClient.ts
-  types/
-    Codespace.ts
+## API
+
+All API endpoints accept POST requests with this body:
+
+```json
+{
+  "key": "shared-post-secret",
+  "query": "codespace-name-or-display-name"
+}
 ```
 
-## Step 2 Implementation Plan
-
-1. Read the local Next.js docs for App Router route handlers before writing API code.
-2. Add shared domain types in `src/types/Codespace.ts`.
-3. Add `src/server/requestAuth.ts` to parse JSON POST bodies and validate `key` against `CODESPACE_CTRL_SECRET`.
-4. Add `src/server/githubCodespaces.ts` with two focused operations:
-   - List the authenticated user's codespaces.
-   - Start one codespace by real GitHub `name`.
-5. Add `POST /api/codespaces/search`.
-   - Body: `{ "key": "...", "query": "..." }`
-   - Invalid secret: `401` or `403`.
-   - Not found: `200` with `{ "found": false }`.
-   - Found: `200` with minimal codespace metadata.
-6. Add `POST /api/codespaces/start`.
-   - Body: `{ "key": "...", "query": "..." }`
-   - Validate secret first.
-   - Find by exact `name` or `display_name`.
-   - Call GitHub start endpoint using the real `name`.
-   - Return the matched metadata and latest known state.
-7. Add `src/services/codespaceClient.ts` so React components do not duplicate `fetch` logic.
-8. Replace the default page with the actual tool UI:
-   - Header.
-   - Search input.
-   - Password input for secret.
-   - Search, Start, and Refresh controls.
-   - Status panel.
-9. Verify locally:
-   - `npm run lint`
-   - `npm run build`
-   - `npm run dev`
-   - Manual POST tests for wrong secret, missing query, not found, found, and start.
-
-## API Contracts
-
-### Search
+### Search Codespace
 
 ```http
 POST /api/codespaces/search
 Content-Type: application/json
 ```
 
-```json
-{
-  "key": "shared-secret",
-  "query": "codespace-name-or-display-name"
-}
-```
-
-Successful found response:
+Found response:
 
 ```json
 {
@@ -132,7 +86,7 @@ Successful found response:
 }
 ```
 
-Successful not-found response:
+Not found response:
 
 ```json
 {
@@ -140,18 +94,11 @@ Successful not-found response:
 }
 ```
 
-### Start
+### Start Codespace
 
 ```http
 POST /api/codespaces/start
 Content-Type: application/json
-```
-
-```json
-{
-  "key": "shared-secret",
-  "query": "codespace-name-or-display-name"
-}
 ```
 
 Successful response:
@@ -168,23 +115,124 @@ Successful response:
 }
 ```
 
-## Design Constraints
+### Stop Codespace
 
-- SOLID: keep GitHub API, request validation, browser API client, and UI components separated.
-- KISS: two API routes, one GitHub service, one auth helper.
-- YAGNI: no database, no auth provider, no fuzzy search, no global state library, no settings screen.
-- Security: reject invalid shared secrets before making GitHub requests.
-- Vercel: keep all secret-dependent code server-only.
+```http
+POST /api/codespaces/stop
+Content-Type: application/json
+```
 
-## Local Development
+Successful response:
+
+```json
+{
+  "stopped": true,
+  "codespace": {
+    "name": "codespace-name",
+    "displayName": "Display Name",
+    "state": "ShuttingDown",
+    "webUrl": "https://..."
+  }
+}
+```
+
+## Development Environment
+
+### Start locally (development mode)
+
+**Step 1. Install dependencies:**
 
 ```bash
 npm install
+```
+
+**Step 2. Configure local secrets:**
+
+Create `.env.local`:
+
+```text
+GITHUB_PAT=github_pat_or_classic_token
+CODESPACE_CTRL_SECRET=shared_post_secret
+```
+
+**Step 3. Start the development server:**
+
+```bash
 npm run dev
 ```
 
-Open:
+**Step 4. Open the app:**
 
 ```text
 http://localhost:3000
 ```
+
+## Local Deployment (Production Mode)
+
+**Step 1. Build the app:**
+
+```bash
+npm run build
+```
+
+**Step 2. Start the production server:**
+
+```bash
+npm start
+```
+
+**Step 3. Open the app:**
+
+```text
+http://localhost:3000
+```
+
+## Project Structure
+
+```text
+src/
+  app/
+    api/codespaces/search/route.ts
+    api/codespaces/start/route.ts
+    api/codespaces/stop/route.ts
+    layout.tsx
+    page.tsx
+  components/
+    CodespaceControlPanel.tsx
+    CodespaceStatus.tsx
+    Header.tsx
+  server/
+    githubCodespaces.ts
+    requestAuth.ts
+  services/
+    codespaceClient.ts
+  types/
+    Codespace.ts
+```
+
+## Design Principles
+
+- KISS: one small page, three POST endpoints, one GitHub service.
+- YAGNI: no database, no user accounts, no settings screen, no background jobs.
+- Server-only secrets: GitHub and shared-secret values stay outside browser code.
+- Small modules: request validation, GitHub access, browser fetch calls, and UI
+  rendering are kept separate.
+
+## Governance (Qodana)
+
+Local Qodana analysis is configured in `qodana.yaml` to use
+`jetbrains/qodana-js:2025.3`.
+
+## Vercel Deployment
+
+Set these Vercel Environment Variables before deploying:
+
+- `GITHUB_PAT`
+- `CODESPACE_CTRL_SECRET`
+
+Then deploy the Next.js app as a standard Vercel project.
+
+## Changelog
+
+- 2026.05 Initial Next.js App Router version with search, start, stop, and a
+  small shared-secret protected UI.
