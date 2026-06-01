@@ -1,11 +1,11 @@
 name: Deploy to Vercel
 
 on:
-#  push:
-#    branches:
-#      - main
-#    tags:
-#      - 'Release-*'
+  push:
+    branches:
+      - main
+    tags:
+      - 'Release-*'
 
   workflow_dispatch:
 
@@ -87,8 +87,8 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
           if gh release view "$VERS" > /dev/null 2>&1; then
             echo "Release $VERS already exists, updating..."
-            gh release edit "$VERS" --title "AudioDeviceRepoClient $VERS" --notes "Release of Audio Device Repository Client $VERS"
+            gh release edit "$VERS" --title "Codespace Control $VERS" --notes "Release of Codespace Control $VERS"
           else
             echo "Creating new release $VERS..."
-            gh release create "$VERS" --title "AudioDeviceRepoClient $VERS" --notes "Release of Audio Device Repository Client $VERS"
+            gh release create "$VERS" --title "Codespace Control $VERS" --notes "Release of Codespace Control $VERS"
           fi
