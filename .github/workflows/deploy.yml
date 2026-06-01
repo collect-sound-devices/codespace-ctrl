@@ -77,54 +77,10 @@ jobs:
           NEXT_PUBLIC_CLIENT_VERSION: ${{ steps.get_version.outputs.VERSION }}
           NEXT_PUBLIC_CLIENT_LATEST_COMMIT_DATE: ${{ steps.get_latest_commit_date.outputs.LATEST_COMMIT_DATE }}
         run: |
-          set -euo pipefail
-          test -n "$VERCEL_TOKEN"
-          test -n "$VERCEL_ORG_ID"
-          test -n "$VERCEL_PROJECT_ID"
-
           npm install -g vercel@latest
           vercel pull --yes --environment=production --token=$VERCEL_TOKEN
           vercel build --prod --token=$VERCEL_TOKEN
-          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN)
-          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
-          echo "Deployment URL: $DEPLOYMENT_URL"
-          vercel alias set "$DEPLOYMENT_URL" codespace-ctrl.vercel.app --token=$VERCEL_TOKEN
-
-      - name: Verify Vercel deployment responds
-        env:
-          DEPLOYMENT_URL: ${{ steps.vercel_deploy.outputs.DEPLOYMENT_URL }}
-        run: |
-          set -euo pipefail
-
-          for attempt in {1..12}; do
-            STATUS=$(curl -L -s -o /dev/null -w "%{http_code}" "$DEPLOYMENT_URL")
-            echo "Attempt $attempt: $DEPLOYMENT_URL returned $STATUS"
-
-            if [ "$STATUS" = "200" ] || [ "$STATUS" = "401" ]; then
-              exit 0
-            fi
-
-            sleep 5
-          done
-
-          echo "Vercel deployment did not return HTTP 200 or protected HTTP 401."
-          exit 1
-
-      - name: Verify production alias responds
-        env:
-          PRODUCTION_URL: https://codespace-ctrl.vercel.app
-        run: |
-          set -euo pipefail
-
-          STATUS=$(curl -L -s -o /dev/null -w "%{http_code}" "$PRODUCTION_URL")
-          echo "$PRODUCTION_URL returned $STATUS"
-
-          if [ "$STATUS" = "200" ] || [ "$STATUS" = "401" ]; then
-            exit 0
-          fi
-
-          echo "Production alias did not return HTTP 200 or protected HTTP 401."
-          exit 1
+          vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
 
       - name: Create or update Release
         run: |
