@@ -12,10 +12,14 @@ jobs:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       GITHUB_PAT: ${{ secrets.UNIVERSAL_PAT }}
+      CODESPACE_CTRL_SECRET: ${{ secrets.CODESPACE_CTRL_SECRET }}
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 'node'
 
@@ -40,4 +44,4 @@ jobs:
           }
 
           sync_env GITHUB_PAT "$GITHUB_PAT" "--sensitive"
-          sync_env NEXT_PUBLIC_API_HOSTED_ON "GITHUB"
+          sync_env CODESPACE_CTRL_SECRET "$CODESPACE_CTRL_SECRET" "--sensitive"

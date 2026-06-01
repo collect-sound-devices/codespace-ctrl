@@ -18,17 +18,17 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Fetch all history and tags
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 'node'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Get version from Git tags
         id: get_version
@@ -69,6 +69,7 @@ jobs:
           echo "Latest commit date: $LATEST_COMMIT_DATE"    
 
       - name: Pull, build and deploy to Vercel
+        id: vercel_deploy
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -79,7 +80,29 @@ jobs:
           npm install -g vercel@latest
           vercel pull --yes --environment=production --token=$VERCEL_TOKEN
           vercel build --prod --token=$VERCEL_TOKEN
-          vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN)
+          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+          echo "Deployment URL: $DEPLOYMENT_URL"
+
+      - name: Verify Vercel deployment responds
+        env:
+          DEPLOYMENT_URL: ${{ steps.vercel_deploy.outputs.DEPLOYMENT_URL }}
+        run: |
+          set -euo pipefail
+
+          for attempt in {1..12}; do
+            STATUS=$(curl -L -s -o /dev/null -w "%{http_code}" "$DEPLOYMENT_URL")
+            echo "Attempt $attempt: $DEPLOYMENT_URL returned $STATUS"
+
+            if [ "$STATUS" = "200" ]; then
+              exit 0
+            fi
+
+            sleep 5
+          done
+
+          echo "Vercel deployment did not return HTTP 200."
+          exit 1
 
       - name: Create or update Release
         run: |
