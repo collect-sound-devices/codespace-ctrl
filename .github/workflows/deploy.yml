@@ -80,29 +80,7 @@ jobs:
           npm install -g vercel@latest
           vercel pull --yes --environment=production --token=$VERCEL_TOKEN
           vercel build --prod --token=$VERCEL_TOKEN
-          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN)
-          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
-          echo "Deployment URL: $DEPLOYMENT_URL"
-
-      - name: Verify Vercel deployment responds
-        env:
-          DEPLOYMENT_URL: ${{ steps.vercel_deploy.outputs.DEPLOYMENT_URL }}
-        run: |
-          set -euo pipefail
-
-          for attempt in {1..12}; do
-            STATUS=$(curl -L -s -o /dev/null -w "%{http_code}" "$DEPLOYMENT_URL")
-            echo "Attempt $attempt: $DEPLOYMENT_URL returned $STATUS"
-
-            if [ "$STATUS" = "200" ]; then
-              exit 0
-            fi
-
-            sleep 5
-          done
-
-          echo "Vercel deployment did not return HTTP 200."
-          exit 1
+          vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
 
       - name: Create or update Release
         run: |
