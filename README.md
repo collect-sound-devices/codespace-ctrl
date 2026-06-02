@@ -1,69 +1,34 @@
 # Codespace Ctrl
 
-Small GitHub Codespaces control panel using Next.js / React / TypeScript.
-
-The app searches the authenticated user's GitHub Codespaces by `name` or
-`display_name` and can start or stop a matched codespace. The browser never calls
-GitHub directly. GitHub API access stays inside Next.js server route handlers.
+Controls GitHub Codespaces from a small Next.js / React / TypeScript app.<br>
+The browser talks only to this app. GitHub API calls stay inside Next.js server
+route handlers.
 
 ## Motivation
 
-*Codespace Ctrl* provides a small public control surface for GitHub Codespaces
-without exposing the GitHub token to the browser.
+*Codespace Ctrl* provides a simple control surface for starting, stopping, and
+checking a GitHub Codespace.
 
-It is intended for cases where a known shared secret is enough protection and a
-full user login flow would be unnecessary.
+It is built for the narrow case where a shared secret is enough access control
+and a full user login flow would add more system than the job needs.
 
 ## Functions
 
-- Search: finds a codespace by exact `name` or exact `display_name`.
+- Lookup: finds one codespace by exact `name` or exact `display_name`
+  comparison after trimming and lowercasing.
 - Status: shows whether the codespace was found and displays its current state.
-- Start: starts the matched codespace when it is not already running.
-- Stop: stops the matched codespace when it is not already stopped.
-- UI: provides one search field, one secret field, icon buttons, and readonly
-  status details.
-- Server protection: every Codespaces API route requires a valid shared secret
-  in the POST request body.
+- Start: starts the matched codespace unless it is already `Available` or
+  `Starting`.
+- Stop: stops the matched codespace unless it is already `Shutdown`,
+  `Archived`, or `Deleted`.
+- Protection: requires the configured shared secret on every API request.
+- Secret handling: keeps `GITHUB_PAT` and `CODESPACE_CTRL_SECRET` server-side.
 
 ## Web Hosting (Primary Use Case)
 
-### Client
-
-- *Codespace Ctrl* is designed for Vercel deployment.
-- The UI is served by Next.js and runs in the browser.
-- The UI sends POST requests only to this app's own API routes.
-
-### Server Functions
-
-- Next.js route handlers run as Vercel server functions.
-- Server functions call the GitHub Codespaces REST API with `GITHUB_PAT`.
-- Server functions reject invalid shared secrets before calling GitHub.
-
-## Environment Variables
-
-Configure these variables locally in `.env.local` and in Vercel Environment
-Variables:
-
-```text
-GITHUB_PAT=github_pat_or_classic_token
-CODESPACE_CTRL_SECRET=shared_post_secret
-```
-
-Do not expose either value with `NEXT_PUBLIC_`.
-
-`GITHUB_PAT` must belong to the GitHub account that owns the target codespaces
-and must be allowed to manage Codespaces.
+- The *Codespace Ctrl* is deployed on Vercel at https://list-audio-react-app.vercel.app.
 
 ## API
-
-All API endpoints accept POST requests with this body:
-
-```json
-{
-  "key": "shared-post-secret",
-  "query": "codespace-name-or-display-name"
-}
-```
 
 ### Search Codespace
 
@@ -72,7 +37,7 @@ POST /api/codespaces/search
 Content-Type: application/json
 ```
 
-Found response:
+Possible response:
 
 ```json
 {
@@ -86,14 +51,6 @@ Found response:
 }
 ```
 
-Not found response:
-
-```json
-{
-  "found": false
-}
-```
-
 ### Start Codespace
 
 ```http
@@ -101,7 +58,7 @@ POST /api/codespaces/start
 Content-Type: application/json
 ```
 
-Successful response:
+Response when found:
 
 ```json
 {
@@ -122,7 +79,7 @@ POST /api/codespaces/stop
 Content-Type: application/json
 ```
 
-Successful response:
+Possible response
 
 ```json
 {
@@ -135,10 +92,9 @@ Successful response:
   }
 }
 ```
-
 ## Development Environment
 
-### Start locally (development mode)
+### Start the app locally (development mode)
 
 **Step 1. Install dependencies:**
 
@@ -155,84 +111,49 @@ GITHUB_PAT=github_pat_or_classic_token
 CODESPACE_CTRL_SECRET=shared_post_secret
 ```
 
-**Step 3. Start the development server:**
+**Step 3. Start the npm development server:**
 
 ```bash
 npm run dev
 ```
 
-**Step 4. Open the app:**
-
-```text
-http://localhost:3000
-```
+**Step 4. Open a browser at http://localhost:3000**
 
 ## Local Deployment (Production Mode)
 
-**Step 1. Build the app:**
+**Step 1. Build the app for production:**
 
 ```bash
 npm run build
 ```
 
-**Step 2. Start the production server:**
+**Step 2. Start the npm production server:**
 
 ```bash
 npm start
 ```
 
-**Step 3. Open the app:**
-
-```text
-http://localhost:3000
-```
-
-## Project Structure
-
-```text
-src/
-  app/
-    api/codespaces/search/route.ts
-    api/codespaces/start/route.ts
-    api/codespaces/stop/route.ts
-    layout.tsx
-    page.tsx
-  components/
-    CodespaceControlPanel.tsx
-    CodespaceStatus.tsx
-    Header.tsx
-  server/
-    githubCodespaces.ts
-    requestAuth.ts
-  services/
-    codespaceClient.ts
-  types/
-    Codespace.ts
-```
-
-## Design Principles
-
-- KISS: one small page, three POST endpoints, one GitHub service.
-- YAGNI: no database, no user accounts, no settings screen, no background jobs.
-- Server-only secrets: GitHub and shared-secret values stay outside browser code.
-- Small modules: request validation, GitHub access, browser fetch calls, and UI
-  rendering are kept separate.
+**Step 3. Open a browser at http://localhost:3000**
 
 ## Governance (Qodana)
 
-Local Qodana analysis is configured in `qodana.yaml` to use
-`jetbrains/qodana-js:2025.3`.
+Local Qodana analysis is configured in `qodana.yaml` to use the
+`jetbrains/qodana-js:2025.3` linter together with the custom inspection profile
+at `.qodana/profiles/inspection-profile01.xml`.
+It explicitly checks `CyclomaticComplexityJS` and excludes non-source files such
+as `README.md`.
 
 ## Vercel Deployment
 
-Set these Vercel Environment Variables before deploying:
-
-- `GITHUB_PAT`
-- `CODESPACE_CTRL_SECRET`
-
-Then deploy the Next.js app as a standard Vercel project.
+- Run `.github/workflows/vercel-init.yml` once for a new Vercel project or when
+  rotating secrets. `GITHUB_PAT` and `CODESPACE_CTRL_SECRET` secrets configured as
+  server-side environment variables.
+- Regular production deployments use `.github/workflows/deploy.yml`.
+- The workflows use the following GitHub Actions secrets: `VERCEL_TOKEN`,
+  `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `UNIVERSAL_PAT`, and
+  `CODESPACE_CTRL_SECRET`.
 
 ## Changelog
 
-- 2026.05 Initial Next.js App Router version with search, start, stop, and a
-  small shared-secret protected UI.
+- 2026.05 Initial Next.js App Router version with search, start, stop, and
+  shared-secret protected API routes.
