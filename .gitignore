@@ -67,3 +67,5 @@ out
 !.idea/inspectionProfiles/
 
 /public/version.json
+next-env.d.ts
+*.tsbuildinfo
