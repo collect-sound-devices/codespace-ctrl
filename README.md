@@ -1,16 +1,12 @@
 # Codespace Ctrl
 
-Controls GitHub Codespaces from a small Next.js / React / TypeScript app.<br>
-The browser talks only to this app. GitHub API calls stay inside Next.js server
-route handlers.
+Controls GitHub Codespaces from a small Next.js / React / TypeScript app,<br>
+deployed on Vercel, https://codespace-ctrl.vercel.app
 
 ## Motivation
 
 *Codespace Ctrl* provides a simple control surface for starting, stopping, and
 checking a GitHub Codespace.
-
-It is built for the narrow case where a shared secret is enough access control
-and a full user login flow would add more system than the job needs.
 
 ## Functions
 
@@ -26,7 +22,7 @@ and a full user login flow would add more system than the job needs.
 
 ## Web Hosting (Primary Use Case)
 
-- The *Codespace Ctrl* is deployed on Vercel at https://list-audio-react-app.vercel.app.
+- The *Codespace Ctrl* is deployed on Vercel at https://codespace-ctrl.vercel.app.
 
 ## API
 
