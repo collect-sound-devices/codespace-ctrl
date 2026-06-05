@@ -1,60 +1,61 @@
 # Codespace Ctrl
 
-Controls GitHub Codespaces from a small Next.js / React / TypeScript app,<br>
-deployed on Vercel, https://codespace-ctrl.vercel.app
+Codespace Ctrl is a small Next.js service for waking / stopping GitHub
+Codespaces through HTTP endpoints. It is intended for developers who want a
+simple service-to-service control API without putting a GitHub token in their
+own client application.
+
+The app is currently deployed on Vercel:
+
+```text
+https://codespace-ctrl.vercel.app
+```
 
 ## Motivation
 
-*Codespace Ctrl* provides a simple control surface for starting, stopping, and
-checking a GitHub Codespace.
+GitHub Codespaces can be stopped, unavailable, or slow to reach when another
+tool expects them to be ready. This project exposes a minimal protected API that
+can:
 
-## Functions
+- find a Codespace by `name` or `display_name` (after trimming and
+  lowercasing the lookup value);
+- report the Codespace state, exact name and display name, and web URL;
+- request a start;
+- request a stop.
 
-- Lookup: finds one codespace by exact `name` or exact `display_name`
-  comparison after trimming and lowercasing.
-- Status: shows whether the codespace was found and displays its current state.
-- Start: starts the matched codespace unless it is already `Available` or
-  `Starting`.
-- Stop: stops the matched codespace unless it is already `Shutdown`,
-  `Archived`, or `Deleted`.
-- Protection: requires the configured shared secret on every API request.
-- Secret handling: keeps `GITHUB_PAT` and `CODESPACE_CTRL_SECRET` server-side.
+The GitHub personal access token (needs Codespace rights) stays on the Vercel as `GITHUB_PAT` secret. The caller
+only send a secret value, that must match the Vercel secret `CODESPACE_CTRL_SECRET`, as `key` in the JSON body.
 
-## Web Hosting (Primary Use Case)
+## API Contract
 
-- The *Codespace Ctrl* is deployed on Vercel at https://codespace-ctrl.vercel.app.
-
-## API
-
-### Search Codespace
-
-```http
-POST /api/codespaces/search
-Content-Type: application/json
-```
-
-Possible response:
+All endpoints are `POST` endpoints and accept the same JSON body:
 
 ```json
 {
-  "found": true,
-  "codespace": {
-    "name": "codespace-name",
-    "displayName": "Display Name",
-    "state": "Available",
-    "webUrl": "https://..."
-  }
+  "key": "post-secret",
+  "query": "codespace-name-or-display-name"
 }
 ```
 
-### Start Codespace
+`query` is matched against the GitHub Codespace `name` and `display_name`.
+Matching is exact after `trim()` and lowercase normalization.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `/api/codespaces/search` | Looks up a Codespace and returns its current state. Use this as the status endpoint. |
+| `/api/codespaces/start` | Looks up a Codespace and requests start if needed. |
+| `/api/codespaces/stop` | Looks up a Codespace and requests stop if needed. |
+
+### Details about Starting Codespace
 
 ```http
 POST /api/codespaces/start
 Content-Type: application/json
 ```
 
-Response when found:
+The endpoint returns `started: true` when a matching Codespace exists. If the
+Codespace is already `Available` or `Starting`, the service does not call the
+GitHub start API again and returns the current Codespace summary.
 
 ```json
 {
@@ -68,37 +69,67 @@ Response when found:
 }
 ```
 
-### Stop Codespace
-
-```http
-POST /api/codespaces/stop
-Content-Type: application/json
-```
-
-Possible response
+Response when not found:
 
 ```json
 {
-  "stopped": true,
-  "codespace": {
-    "name": "codespace-name",
-    "displayName": "Display Name",
-    "state": "ShuttingDown",
-    "webUrl": "https://..."
-  }
+  "started": false,
+  "found": false
 }
 ```
-## Development Environment
 
-### Start the app locally (development mode)
+Error payloads for invalid requests or upstream failures:
 
-**Step 1. Install dependencies:**
+```json
+{
+  "error": "Secret key is invalid."
+}
+```
+
+Important statuses:
+
+- `400`: invalid JSON body or missing `query`;
+- `401`: missing `key`;
+- `403`: invalid `key`;
+- `500`: server secret is not configured;
+- `502`: GitHub Codespaces API request failed.
+
+## Draft C# Example of Starting a Codespace by Name:
+
+```csharp
+var endpoint = "https://codespace-ctrl.vercel.app/api/codespaces/start";
+var body = new
+{
+    key = Environment.GetEnvironmentVariable("CODESPACE_CTRL_SECRET"),
+    query = "my-codespace"
+};
+
+using var http = new HttpClient();
+using var response = await http.PostAsJsonAsync(endpoint, body);
+var json = await response.Content.ReadAsStringAsync();
+
+Console.WriteLine($"{(int)response.StatusCode} {json}");
+response.EnsureSuccessStatusCode();
+```
+
+## GUI
+
+The web UI is a test and demonstration client for the same API.
+Inputs:
+
+- Codespace name or display name;
+- shared secret string.
+
+The three icon buttons call search/status, start, and stop. The result panel
+shows state, Codespace name, display name, and a short operation message.
+
+## Local Development
+
+Install dependencies:
 
 ```bash
 npm install
 ```
-
-**Step 2. Configure local secrets:**
 
 Create `.env.local`:
 
@@ -107,47 +138,48 @@ GITHUB_PAT=github_pat_or_classic_token
 CODESPACE_CTRL_SECRET=shared_post_secret
 ```
 
-**Step 3. Start the npm development server:**
+Start the development server:
 
 ```bash
 npm run dev
 ```
 
-**Step 4. Open a browser at http://localhost:3000**
+Open:
 
-## Local Deployment (Production Mode)
+```text
+http://localhost:3000
+```
 
-**Step 1. Build the app for production:**
+## Production Build
 
 ```bash
 npm run build
-```
-
-**Step 2. Start the npm production server:**
-
-```bash
 npm start
 ```
 
-**Step 3. Open a browser at http://localhost:3000**
-
-## Governance (Qodana)
-
-Local Qodana analysis is configured in `qodana.yaml` to use the
-`jetbrains/qodana-js:2025.3` linter together with the custom inspection profile
-at `.qodana/profiles/inspection-profile01.xml`.
-It explicitly checks `CyclomaticComplexityJS` and excludes non-source files such
-as `README.md`.
+The production server also runs on `http://localhost:3000` by default.
 
 ## Vercel Deployment
 
-- Run `.github/workflows/vercel-init.yml` once for a new Vercel project or when
-  rotating secrets. `GITHUB_PAT` and `CODESPACE_CTRL_SECRET` secrets configured as
-  server-side environment variables.
-- Regular production deployments use `.github/workflows/deploy.yml`.
-- The workflows use the following GitHub Actions secrets: `VERCEL_TOKEN`,
-  `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `UNIVERSAL_PAT`, and
-  `CODESPACE_CTRL_SECRET`.
+The repository contains GitHub workflows for Vercel delivery:
+
+- `.github/workflows/vercel-init.yml` (optional) initializes or refreshes production Vercel
+  secret environment variables. It uses GitHub Actions secrets.
+- `.github/workflows/deploy.yml` builds and deploys the app to Vercel.
+
+Required GitHub Actions secrets:
+
+```text
+VERCEL_TOKEN
+VERCEL_ORG_ID
+VERCEL_PROJECT_ID
+```
+
+## Governance
+
+Qodana analysis is configured in `qodana.yaml` with the
+`jetbrains/qodana-js:2025.3` linter and the inspection profile at
+`.qodana/profiles/inspection-profile01.xml`.
 
 ## Changelog
 

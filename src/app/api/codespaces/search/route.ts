@@ -1,4 +1,5 @@
 import { findCodespaceByNameOrDisplayName } from "@/server/githubCodespaces";
+import { codespacesApiErrorResponse } from "@/server/codespacesApiError";
 import { parseAndAuthorizeCodespaceRequest } from "@/server/requestAuth";
 import type { SearchCodespaceResponse } from "@/types/Codespace";
 
@@ -21,11 +22,7 @@ export async function POST(request: Request) {
       : { found: false };
 
     return Response.json(response);
-  } catch {
-    return Response.json(
-      { error: "Codespace search failed." },
-      { status: 502 },
-    );
+  } catch (error) {
+    return codespacesApiErrorResponse(error, "Codespace search failed.");
   }
 }
-

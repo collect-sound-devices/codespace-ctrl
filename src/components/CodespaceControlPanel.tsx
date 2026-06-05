@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState, useTransition } from "react";
+import { SyntheticEvent, useState, useTransition } from "react";
 
 import { CodespaceStatus } from "@/components/CodespaceStatus";
 import {
@@ -23,7 +23,7 @@ export function CodespaceControlPanel() {
   const isBusy = isPending || activeOperation !== null;
   const canSubmit = query.trim().length > 0 && secret.length > 0 && !isBusy;
 
-  function handleSearch(event?: FormEvent<HTMLFormElement>) {
+  function handleSearch(event?: SyntheticEvent<HTMLFormElement>) {
     event?.preventDefault();
     runSearch();
   }
