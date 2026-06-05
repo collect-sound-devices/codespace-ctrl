@@ -2,6 +2,7 @@ import {
   findCodespaceByNameOrDisplayName,
   stopCodespace,
 } from "@/server/githubCodespaces";
+import { codespacesApiErrorResponse } from "@/server/codespacesApiError";
 import { parseAndAuthorizeCodespaceRequest } from "@/server/requestAuth";
 import type { StopCodespaceResponse } from "@/types/Codespace";
 
@@ -40,11 +41,7 @@ export async function POST(request: Request) {
     };
 
     return Response.json(response);
-  } catch {
-    return Response.json(
-      { error: "Codespace stop failed." },
-      { status: 502 },
-    );
+  } catch (error) {
+    return codespacesApiErrorResponse(error, "Codespace stop failed.");
   }
 }
-

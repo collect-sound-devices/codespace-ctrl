@@ -2,6 +2,7 @@ import {
   findCodespaceByNameOrDisplayName,
   startCodespace,
 } from "@/server/githubCodespaces";
+import { codespacesApiErrorResponse } from "@/server/codespacesApiError";
 import { parseAndAuthorizeCodespaceRequest } from "@/server/requestAuth";
 import type { StartCodespaceResponse } from "@/types/Codespace";
 
@@ -40,11 +41,7 @@ export async function POST(request: Request) {
     };
 
     return Response.json(response);
-  } catch {
-    return Response.json(
-      { error: "Codespace start failed." },
-      { status: 502 },
-    );
+  } catch (error) {
+    return codespacesApiErrorResponse(error, "Codespace start failed.");
   }
 }
-
