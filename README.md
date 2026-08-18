@@ -17,9 +17,8 @@ GitHub Codespaces can be stopped, unavailable, or slow to reach when another
 tool expects them to be ready. This project exposes a minimal protected API that
 can:
 
-- find a Codespace by `name` or `display_name` (after trimming and
-  lowercasing the lookup value);
-- report the Codespace state, exact name and display name, and web URL;
+- find a Codespace by `name` or `display_name` (case-insensitive, trimmed);
+- report the Codespace's exact name, display name, state (shutdown, starting, available) and web URL;
 - request a start;
 - request a stop.
 
