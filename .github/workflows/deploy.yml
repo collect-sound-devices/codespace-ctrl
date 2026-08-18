@@ -74,7 +74,7 @@ jobs:
           NEXT_PUBLIC_CLIENT_VERSION: ${{ steps.get_version.outputs.VERSION }}
           NEXT_PUBLIC_CLIENT_LATEST_COMMIT_DATE: ${{ steps.get_latest_commit_date.outputs.LATEST_COMMIT_DATE }}
         run: |
-          npm install -g vercel@34.2.0 # NOSONAR
+          npm install -g vercel@34.2.0
           vercel pull --yes --environment=production --token=$VERCEL_TOKEN
           vercel build --prod --token=$VERCEL_TOKEN
           vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
