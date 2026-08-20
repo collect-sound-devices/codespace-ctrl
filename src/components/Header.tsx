@@ -17,7 +17,7 @@ export function Header({ version, releaseDate }: HeaderProps) {
         </div>
         <div className="flex flex-col items-end gap-1">
           <span className="text-xs text-stone-500">
-            v{version}
+            {version}
           </span>
           <span className="text-xs text-stone-500">
             {releaseDate}
